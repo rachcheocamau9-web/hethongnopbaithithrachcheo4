@@ -328,6 +328,27 @@
   .btn-secondary:hover{ border-color: var(--seal); color: var(--seal); transform:none; box-shadow:none; }
 
   .perforation.bottom{ top: auto; bottom: 0; }
+
+  .admin-link{
+    position: fixed;
+    right: 14px;
+    bottom: 12px;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    opacity: 0.45;
+    text-decoration: none;
+    padding: 6px 9px;
+    border-radius: 6px;
+    transition: opacity .15s ease, background .15s ease, color .15s ease;
+    font-weight: 600;
+    z-index: 10;
+  }
+  .admin-link:hover{
+    opacity: 1;
+    background: rgba(35,30,20,0.05);
+    color: var(--seal);
+  }
 </style>
 </head>
 <body>
@@ -394,6 +415,8 @@
 
   <div class="perforation bottom"></div>
 </div>
+
+<a href="/admin" class="admin-link" title="Trang quản trị cuộc thi">⚙ Quản trị</a>
 
 <script>
   // ============================================================
