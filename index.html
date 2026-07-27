@@ -349,6 +349,67 @@
     background: rgba(35,30,20,0.05);
     color: var(--seal);
   }
+
+  .toast{
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-16px);
+    opacity: 0;
+    pointer-events: none;
+    display:flex;
+    align-items:flex-start;
+    gap: 10px;
+    background: var(--seal);
+    color: #fff;
+    padding: 14px 16px;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(122,30,20,0.35), 0 2px 8px rgba(0,0,0,0.12);
+    max-width: min(90vw, 420px);
+    z-index: 1000;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  .toast .toast-icon{
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+  .toast .toast-text{
+    font-size: 13.5px;
+    line-height: 1.45;
+    font-weight: 500;
+    padding-top: 2px;
+  }
+  .toast .toast-close{
+    flex: 0 0 auto;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.75);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: 2px;
+  }
+  .toast .toast-close:hover{ color:#fff; }
+
+  @media (max-width: 480px){
+    .toast{ top: 12px; left: 12px; right: 12px; transform: translateY(-16px); max-width: none; }
+    .toast.show{ transform: translateY(0); }
+  }
 </style>
 </head>
 <body>
@@ -417,6 +478,12 @@
 </div>
 
 <a href="/admin" class="admin-link" title="Trang quản trị cuộc thi">⚙ Quản trị</a>
+
+<div class="toast" id="toast">
+  <div class="toast-icon">!</div>
+  <div class="toast-text" id="toastText"></div>
+  <button class="toast-close" id="toastClose" aria-label="Đóng">✕</button>
+</div>
 
 <script>
   // ============================================================
@@ -532,7 +599,27 @@
   function showError(msg){
     errorMsg.textContent = msg;
     errorMsg.style.display = 'block';
+    showToast(msg);
   }
+
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toastText');
+  const toastClose = document.getElementById('toastClose');
+  let toastTimer = null;
+
+  function showToast(msg){
+    toastText.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 5000);
+  }
+  function hideToast(){
+    toast.classList.remove('show');
+  }
+  toastClose.addEventListener('click', () => {
+    clearTimeout(toastTimer);
+    hideToast();
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
