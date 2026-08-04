@@ -410,6 +410,69 @@
     .toast{ top: 12px; left: 12px; right: 12px; transform: translateY(-16px); max-width: none; }
     .toast.show{ transform: translateY(0); }
   }
+
+  .modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(24,18,12,0.6);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 2000;
+  }
+  .modal-overlay.show{
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal-card{
+    background: var(--paper);
+    border-radius: 18px;
+    max-width: 380px;
+    width: 100%;
+    padding: 34px 28px 28px;
+    text-align: center;
+    box-shadow: 0 30px 60px -15px rgba(0,0,0,0.4);
+    transform: translateY(14px) scale(0.97);
+    transition: transform .25s ease;
+    border: 1px solid var(--paper-edge);
+  }
+  .modal-overlay.show .modal-card{
+    transform: translateY(0) scale(1);
+  }
+  .modal-icon{
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--seal) 0%, var(--seal-dark) 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 700;
+    box-shadow: 0 10px 22px -8px rgba(169,52,42,0.6);
+  }
+  .modal-card h2{
+    font-family: 'Noto Serif', serif;
+    font-size: 20px;
+    color: var(--ink);
+    margin: 0 0 10px;
+  }
+  .modal-card p{
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    margin: 0 0 24px;
+  }
+  .modal-card .btn{
+    margin-top: 0;
+  }
 </style>
 </head>
 <body>
@@ -483,6 +546,15 @@
   <div class="toast-icon">!</div>
   <div class="toast-text" id="toastText"></div>
   <button class="toast-close" id="toastClose" aria-label="Đóng">✕</button>
+</div>
+
+<div class="modal-overlay" id="duplicateModal">
+  <div class="modal-card">
+    <div class="modal-icon">⚠</div>
+    <h2>Bạn đã nộp bài rồi</h2>
+    <p id="modalText">Bạn đã nộp bài trước đó rồi. Mỗi người chỉ được nộp 1 bài dự thi.</p>
+    <button class="btn" id="modalCloseBtn">ĐÃ HIỂU</button>
+  </div>
 </div>
 
 <script>
@@ -621,6 +693,22 @@
     hideToast();
   });
 
+  const duplicateModal = document.getElementById('duplicateModal');
+  const modalText = document.getElementById('modalText');
+  const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+  function showDuplicateModal(msg){
+    modalText.textContent = msg;
+    duplicateModal.classList.add('show');
+  }
+  function hideDuplicateModal(){
+    duplicateModal.classList.remove('show');
+  }
+  modalCloseBtn.addEventListener('click', hideDuplicateModal);
+  duplicateModal.addEventListener('click', (e) => {
+    if(e.target === duplicateModal) hideDuplicateModal();
+  });
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     errorMsg.style.display = 'none';
@@ -655,13 +743,19 @@
 
       let ok = res.ok;
       let serverMessage = '';
+      let serverCode = '';
       try{
         const data = await res.json();
         ok = data.status === 'success';
         serverMessage = data.message || '';
+        serverCode = data.code || '';
       }catch(_){ /* một số trình duyệt có thể không đọc được response, vẫn coi là thành công nếu res.ok */ }
 
-      if(!ok) throw new Error(serverMessage || 'Server từ chối yêu cầu.');
+      if(!ok){
+        const err = new Error(serverMessage || 'Server từ chối yêu cầu.');
+        err.code = serverCode;
+        throw err;
+      }
 
       successName.textContent = `${fullName} đã`;
       formWrap.classList.add('hide');
@@ -670,7 +764,12 @@
 
     }catch(err){
       console.error(err);
-      showError(err.message && err.message !== 'Server từ chối yêu cầu.' ? err.message : 'Có lỗi khi gửi bài. Vui lòng thử lại.');
+      const msg = err.message && err.message !== 'Server từ chối yêu cầu.' ? err.message : 'Có lỗi khi gửi bài. Vui lòng thử lại.';
+      if(err.code === 'DUPLICATE'){
+        showDuplicateModal(msg);
+      } else {
+        showError(msg);
+      }
     }finally{
       setLoading(false);
     }
