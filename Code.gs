@@ -108,6 +108,7 @@ function submitEntry(data) {
   if (hasAlreadySubmitted(fullName, sheet)) {
     return jsonOutput({
       status: 'error',
+      code: 'DUPLICATE',
       message: 'Bạn đã nộp bài trước đó rồi. Mỗi người chỉ được nộp 1 bài dự thi.'
     });
   }
