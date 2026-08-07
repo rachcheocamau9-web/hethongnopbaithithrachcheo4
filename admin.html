@@ -123,6 +123,47 @@
   .del-btn:hover{ background:#F8EDE9; }
   .del-btn:disabled{ opacity:0.5; cursor:not-allowed; }
 
+  .contests-table{
+    width:100%; border-collapse:collapse; font-size:12.5px; margin-top:4px;
+  }
+  .contests-table th{
+    text-align:left; font-size:10.5px; letter-spacing:0.04em; text-transform:uppercase;
+    color:var(--ink-soft); border-bottom:1.5px solid var(--line); padding:6px 5px;
+  }
+  .contests-table td{
+    padding:9px 5px; border-bottom:1px solid var(--line); vertical-align:middle;
+  }
+  .contests-table .cname{ font-weight:700; color:var(--ink); }
+  .contests-table .cdate{ font-size:11px; color:var(--ink-soft); white-space:nowrap; }
+  .badge{
+    display:inline-block; font-size:10.5px; font-weight:700; padding:3px 8px;
+    border-radius:20px; white-space:nowrap;
+  }
+  .badge-open{ background:#E4EFE1; color:#3f6b3f; }
+  .badge-upcoming{ background:#FBF1DC; color:#8a6a1c; }
+  .badge-closed{ background:#EFEAE0; color:var(--ink-soft); }
+  .row-actions{ display:flex; gap:4px; white-space:nowrap; }
+  .row-actions button{
+    border:none; background:transparent; cursor:pointer; font-size:11.5px;
+    font-weight:700; padding:4px 7px; border-radius:6px; color:var(--ink-soft);
+  }
+  .row-actions button:hover{ background:#F1EBDC; color:var(--ink); }
+  .row-actions button.view-btn:hover{ color:var(--seal); }
+  .contests-empty{ font-size:13px; color:var(--ink-soft); text-align:center; padding:16px 0; }
+  .editing-banner{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#FBF1DC; border:1px solid #EAD9A6; border-radius:8px;
+    padding:9px 12px; font-size:12.5px; color:#8a6a1c; margin-bottom:16px;
+  }
+  .editing-banner button{
+    border:none; background:none; color:#8a6a1c; font-weight:700;
+    text-decoration:underline; cursor:pointer; font-size:12px;
+  }
+  .active-contest-note{
+    font-size:12px; color:var(--ink-soft); margin: -6px 0 14px;
+  }
+  .active-contest-note b{ color:var(--ink); }
+
   .logout-link{
     display:block; text-align:center; font-size:12px; color:var(--ink-soft);
     opacity:0.7; text-decoration:none; margin-top:18px; cursor:pointer;
@@ -158,6 +199,32 @@
 
   <div id="adminPanel" style="display:none">
 
+  <div class="section-title">Danh sách cuộc thi</div>
+  <div class="section-sub">Có thể tạo nhiều cuộc thi chạy song song cùng lúc. Bấm "Sửa" để đổi tên/ngày, hoặc "Bài nộp" để xem danh sách nộp bài của cuộc thi đó.</div>
+
+  <div class="msg" id="contestsMsg"></div>
+  <div id="contestsEmpty" class="contests-empty" style="display:none">Chưa có cuộc thi nào. Tạo cuộc thi đầu tiên ở form bên dưới.</div>
+  <table class="contests-table" id="contestsTable" style="display:none">
+    <thead>
+      <tr>
+        <th>Tên cuộc thi</th>
+        <th>Trạng thái</th>
+        <th>Thời gian nhận bài</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="contestsBody"></tbody>
+  </table>
+
+  <hr class="divider">
+
+  <div class="editing-banner" id="editingBanner" style="display:none">
+    <span>Đang sửa: <b id="editingContestName"></b></span>
+    <button id="cancelEditBtn">Huỷ sửa</button>
+  </div>
+
+  <div class="section-title" id="formSectionTitle">Tạo cuộc thi mới</div>
+
   <div class="field">
     <label for="contestName">Tên cuộc thi</label>
     <input type="text" id="contestName" placeholder="VD: Cuộc thi ảnh nghệ thuật 2026">
@@ -175,26 +242,27 @@
 
   <input type="hidden" id="password">
 
-  <button class="btn" id="saveBtn">
-    <span class="spinner"></span>
-    <span id="saveLabel">LƯU THIẾT LẬP</span>
-  </button>
-
   <button class="btn btn-new-contest" id="newContestBtn">
     <span class="spinner"></span>
     <span id="newContestLabel">🆕 TẠO CUỘC THI MỚI (Sheet + Folder riêng)</span>
   </button>
-  <div class="hint">Sẽ tạo 1 tab dữ liệu mới và 1 thư mục Drive mới đúng theo tên cuộc thi ở trên. Bài nộp của cuộc thi cũ vẫn được giữ nguyên, không bị mất.</div>
+  <div class="hint" id="newContestHint">Sẽ tạo 1 tab dữ liệu mới và 1 thư mục Drive mới đúng theo tên cuộc thi ở trên. Các cuộc thi khác đang chạy không bị ảnh hưởng.</div>
+
+  <button class="btn" id="saveBtn" style="display:none">
+    <span class="spinner"></span>
+    <span id="saveLabel">LƯU THAY ĐỔI</span>
+  </button>
 
   <div class="msg" id="msgBox"></div>
 
   <hr class="divider">
 
   <div class="section-title">Danh sách bài dự thi</div>
-  <div class="section-sub">Xem danh sách bài đã nộp của cuộc thi hiện tại.</div>
+  <div class="section-sub" id="entriesSectionSub">Bấm "Bài nộp" ở 1 cuộc thi trong danh sách phía trên để xem tại đây.</div>
+  <div class="active-contest-note" id="activeContestNote" style="display:none">Đang xem bài nộp của: <b id="viewingContestName"></b></div>
 
   <div class="btn-row">
-    <button class="btn btn-secondary" id="loadEntriesBtn" style="flex:1">
+    <button class="btn btn-secondary" id="loadEntriesBtn" style="flex:1" disabled>
       <span class="spinner"></span>
       <span id="loadEntriesLabel">XEM DANH SÁCH</span>
     </button>
@@ -234,6 +302,50 @@
   const saveBtn = document.getElementById('saveBtn');
   const saveLabel = document.getElementById('saveLabel');
   const msgBox = document.getElementById('msgBox');
+  const formSectionTitle = document.getElementById('formSectionTitle');
+  const newContestBtn = document.getElementById('newContestBtn');
+  const newContestLabel = document.getElementById('newContestLabel');
+  const newContestHint = document.getElementById('newContestHint');
+  const editingBanner = document.getElementById('editingBanner');
+  const editingContestNameEl = document.getElementById('editingContestName');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const NEW_CONTEST_LABEL_DEFAULT = '🆕 TẠO CUỘC THI MỚI (Sheet + Folder riêng)';
+
+  const contestsMsg = document.getElementById('contestsMsg');
+  const contestsEmpty = document.getElementById('contestsEmpty');
+  const contestsTable = document.getElementById('contestsTable');
+  const contestsBody = document.getElementById('contestsBody');
+
+  const loadEntriesBtn = document.getElementById('loadEntriesBtn');
+  const loadEntriesLabel = document.getElementById('loadEntriesLabel');
+  const exportBtn = document.getElementById('exportBtn');
+  const entriesMsg = document.getElementById('entriesMsg');
+  const entriesWrap = document.getElementById('entriesWrap');
+  const entriesBody = document.getElementById('entriesBody');
+  const entriesSectionSub = document.getElementById('entriesSectionSub');
+  const activeContestNote = document.getElementById('activeContestNote');
+  const viewingContestNameEl = document.getElementById('viewingContestName');
+
+  let allContests = [];      // danh sách tất cả cuộc thi (từ listContestsAdmin)
+  let editingContestId = '';  // '' = đang ở chế độ TẠO MỚI; khác '' = đang SỬA cuộc thi này
+  let viewingContestId = '';  // cuộc thi đang xem danh sách bài nộp
+  let currentEntries = [];
+
+  function showMsg(text, type){
+    msgBox.textContent = text;
+    msgBox.className = `msg ${type}`;
+    msgBox.style.display = 'block';
+  }
+  function showContestsMsg(text, type){
+    contestsMsg.textContent = text;
+    contestsMsg.className = `msg ${type}`;
+    contestsMsg.style.display = 'block';
+  }
+  function showEntriesMsg(text, type){
+    entriesMsg.textContent = text;
+    entriesMsg.className = `msg ${type}`;
+    entriesMsg.style.display = 'block';
+  }
 
   function toLocalInputValue(isoStr){
     if(!isoStr) return '';
@@ -241,33 +353,24 @@
     const pad = n => n.toString().padStart(2,'0');
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
-
-  function showMsg(text, type){
-    msgBox.textContent = text;
-    msgBox.className = `msg ${type}`;
-    msgBox.style.display = 'block';
+  function formatVN(dateStr){
+    if(!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('vi-VN', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' });
   }
-
-  async function loadCurrentSettings(){
-    if(SCRIPT_URL.includes('PASTE_YOUR')){
-      showMsg('Chưa cấu hình SCRIPT_URL trong file admin.html.', 'error');
-      return;
-    }
-    try{
-      const res = await fetch(`${SCRIPT_URL}?action=getSettings`);
-      const data = await res.json();
-      if(data.status === 'success'){
-        contestName.value = data.contestName || '';
-        openDate.value = toLocalInputValue(data.openDate);
-        endDate.value = toLocalInputValue(data.endDate);
-      }
-    }catch(err){
-      console.error(err);
-      showMsg('Không tải được thiết lập hiện tại.', 'error');
-    }
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
   }
-
-  loadCurrentSettings();
+  function contestStatus(c){
+    const now = new Date();
+    const o = c.openDate ? new Date(c.openDate) : null;
+    const e = c.endDate ? new Date(c.endDate) : null;
+    if(o && now < o) return { key:'upcoming', label:'Sắp mở' };
+    if(e && now > e) return { key:'closed', label:'Đã đóng' };
+    return { key:'open', label:'Đang mở' };
+  }
 
   // ---------------------- Đăng nhập / chắn mật khẩu ----------------------
   const loginGate = document.getElementById('loginGate');
@@ -310,6 +413,7 @@
         password.value = loginPassword.value; // dùng lại cho các thao tác bên trong
         loginGate.style.display = 'none';
         adminPanel.style.display = 'block';
+        loadContestsList();
       } else {
         showLoginMsg(data.message || 'Sai mật khẩu quản trị.');
       }
@@ -337,15 +441,111 @@
     entriesWrap.style.display = 'none';
     entriesMsg.style.display = 'none';
     msgBox.style.display = 'none';
+    contestsMsg.style.display = 'none';
+    exitEditMode();
+    allContests = [];
+    viewingContestId = '';
+    activeContestNote.style.display = 'none';
+    loadEntriesBtn.disabled = true;
   });
+
+  // ---------------------- Danh sách cuộc thi ----------------------
+  async function loadContestsList(){
+    contestsMsg.style.display = 'none';
+    try{
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'listContestsAdmin', password: password.value })
+      });
+      const data = await res.json();
+      if(data.status !== 'success'){
+        showContestsMsg(data.message || 'Không tải được danh sách cuộc thi.', 'error');
+        return;
+      }
+      allContests = data.contests || [];
+      renderContestsList();
+    }catch(err){
+      console.error(err);
+      showContestsMsg('Có lỗi khi tải danh sách cuộc thi.', 'error');
+    }
+  }
+
+  function renderContestsList(){
+    if(allContests.length === 0){
+      contestsTable.style.display = 'none';
+      contestsEmpty.style.display = 'block';
+      return;
+    }
+    contestsEmpty.style.display = 'none';
+    contestsTable.style.display = 'table';
+    contestsBody.innerHTML = '';
+
+    allContests.forEach(c => {
+      const st = contestStatus(c);
+      const dateRange = (c.openDate && c.endDate)
+        ? `${formatVN(c.openDate)} — ${formatVN(c.endDate)}`
+        : 'Chưa đặt thời gian';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="cname">${escapeHtml(c.contestName)}</td>
+        <td><span class="badge badge-${st.key}">${st.label}</span></td>
+        <td class="cdate">${dateRange}</td>
+        <td>
+          <div class="row-actions">
+            <button class="edit-btn" data-id="${c.id}">Sửa</button>
+            <button class="view-btn" data-id="${c.id}">Bài nộp</button>
+          </div>
+        </td>
+      `;
+      contestsBody.appendChild(tr);
+    });
+  }
+
+  contestsBody.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-btn');
+    const viewBtn = e.target.closest('.view-btn');
+    if(editBtn) enterEditMode(editBtn.dataset.id);
+    if(viewBtn) selectContestForEntries(viewBtn.dataset.id);
+  });
+
+  // ---------------------- Chế độ Tạo mới / Sửa cuộc thi ----------------------
+  function enterEditMode(id){
+    const c = allContests.find(x => x.id === id);
+    if(!c) return;
+    editingContestId = id;
+    contestName.value = c.contestName || '';
+    openDate.value = toLocalInputValue(c.openDate);
+    endDate.value = toLocalInputValue(c.endDate);
+
+    formSectionTitle.textContent = 'Sửa cuộc thi';
+    editingBanner.style.display = 'flex';
+    editingContestNameEl.textContent = c.contestName;
+    newContestBtn.style.display = 'none';
+    newContestHint.style.display = 'none';
+    saveBtn.style.display = 'flex';
+    msgBox.style.display = 'none';
+
+    window.scrollTo({ top: document.getElementById('formSectionTitle').offsetTop - 20, behavior: 'smooth' });
+  }
+
+  function exitEditMode(){
+    editingContestId = '';
+    contestName.value = '';
+    openDate.value = '';
+    endDate.value = '';
+    formSectionTitle.textContent = 'Tạo cuộc thi mới';
+    editingBanner.style.display = 'none';
+    newContestBtn.style.display = 'flex';
+    newContestHint.style.display = 'block';
+    saveBtn.style.display = 'none';
+  }
+
+  cancelEditBtn.addEventListener('click', exitEditMode);
 
   saveBtn.addEventListener('click', async () => {
     msgBox.style.display = 'none';
 
-    if(!password.value){
-      showMsg('Vui lòng nhập mật khẩu quản trị.', 'error');
-      return;
-    }
     if(!contestName.value.trim()){
       showMsg('Vui lòng nhập tên cuộc thi.', 'error');
       return;
@@ -366,6 +566,7 @@
         body: JSON.stringify({
           action: 'updateSettings',
           password: password.value,
+          contestId: editingContestId,
           contestName: contestName.value.trim(),
           openDate: openDate.value ? new Date(openDate.value).toISOString() : '',
           endDate: endDate.value ? new Date(endDate.value).toISOString() : ''
@@ -373,9 +574,11 @@
       });
       const data = await res.json();
       if(data.status === 'success'){
-        showMsg('Đã lưu thiết lập cuộc thi thành công.', 'success');
+        showMsg('Đã lưu thay đổi.', 'success');
+        exitEditMode();
+        loadContestsList();
       } else {
-        showMsg(data.message || 'Không thể lưu thiết lập.', 'error');
+        showMsg(data.message || 'Không thể lưu thay đổi.', 'error');
       }
     }catch(err){
       console.error(err);
@@ -383,22 +586,13 @@
     }finally{
       saveBtn.disabled = false;
       saveBtn.classList.remove('loading');
-      saveLabel.textContent = 'LƯU THIẾT LẬP';
+      saveLabel.textContent = 'LƯU THAY ĐỔI';
     }
   });
-
-  // ---------------------- Tạo cuộc thi mới (Sheet + Folder riêng) ----------------------
-  const newContestBtn = document.getElementById('newContestBtn');
-  const newContestLabel = document.getElementById('newContestLabel');
-  const NEW_CONTEST_LABEL_DEFAULT = '🆕 TẠO CUỘC THI MỚI (Sheet + Folder riêng)';
 
   newContestBtn.addEventListener('click', async () => {
     msgBox.style.display = 'none';
 
-    if(!password.value){
-      showMsg('Vui lòng nhập mật khẩu quản trị.', 'error');
-      return;
-    }
     if(!contestName.value.trim()){
       showMsg('Vui lòng nhập tên cuộc thi trước khi tạo.', 'error');
       return;
@@ -411,8 +605,7 @@
     const confirmed = confirm(
       `Tạo cuộc thi mới "${contestName.value.trim()}"?\n\n` +
       `Hệ thống sẽ tự động tạo 1 tab dữ liệu mới và 1 thư mục Drive mới đúng tên cuộc thi này. ` +
-      `Từ giờ, bài nộp mới sẽ được lưu vào tab/thư mục mới đó.\n\n` +
-      `Bài nộp của cuộc thi trước vẫn được giữ nguyên trong tab/thư mục cũ, không bị xoá hay ghi đè.`
+      `Cuộc thi này sẽ chạy SONG SONG với các cuộc thi khác đang có, không thay thế hay ảnh hưởng gì đến chúng.`
     );
     if(!confirmed) return;
 
@@ -435,11 +628,10 @@
       const data = await res.json();
       if(data.status === 'success'){
         showMsg(`Đã tạo cuộc thi mới. Tab: "${data.sheetName}". Đã tạo thư mục Drive mới.`, 'success');
-        // Danh sách bài nộp đang hiển thị (nếu có) là của cuộc thi CŨ -> ẩn đi cho khỏi nhầm
-        entriesWrap.style.display = 'none';
-        entriesMsg.style.display = 'none';
-        currentEntries = [];
-        exportBtn.disabled = true;
+        contestName.value = '';
+        openDate.value = '';
+        endDate.value = '';
+        loadContestsList();
       } else {
         showMsg(data.message || 'Không thể tạo cuộc thi mới.', 'error');
       }
@@ -453,26 +645,21 @@
     }
   });
 
-  // ---------------------- Danh sách bài dự thi ----------------------
-  const loadEntriesBtn = document.getElementById('loadEntriesBtn');
-  const loadEntriesLabel = document.getElementById('loadEntriesLabel');
-  const exportBtn = document.getElementById('exportBtn');
-  const entriesMsg = document.getElementById('entriesMsg');
-  const entriesWrap = document.getElementById('entriesWrap');
-  const entriesBody = document.getElementById('entriesBody');
-
-  let currentEntries = [];
-
-  function showEntriesMsg(text, type){
-    entriesMsg.textContent = text;
-    entriesMsg.className = `msg ${type}`;
-    entriesMsg.style.display = 'block';
-  }
-
-  function formatVN(dateStr){
-    if(!dateStr) return '';
-    const d = new Date(dateStr);
-    return d.toLocaleString('vi-VN', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' });
+  // ---------------------- Danh sách bài dự thi (theo cuộc thi được chọn) ----------------------
+  function selectContestForEntries(id){
+    const c = allContests.find(x => x.id === id);
+    if(!c) return;
+    viewingContestId = id;
+    viewingContestNameEl.textContent = c.contestName;
+    activeContestNote.style.display = 'block';
+    entriesSectionSub.style.display = 'none';
+    loadEntriesBtn.disabled = false;
+    entriesWrap.style.display = 'none';
+    entriesMsg.style.display = 'none';
+    currentEntries = [];
+    exportBtn.disabled = true;
+    loadEntries();
+    window.scrollTo({ top: document.getElementById('activeContestNote').offsetTop - 20, behavior: 'smooth' });
   }
 
   function renderEntries(entries){
@@ -500,15 +687,9 @@
     exportBtn.disabled = false;
   }
 
-  function escapeHtml(str){
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  }
-
   async function loadEntries(){
-    if(!password.value){
-      showEntriesMsg('Vui lòng nhập mật khẩu quản trị ở ô phía trên.', 'error');
+    if(!viewingContestId){
+      showEntriesMsg('Vui lòng chọn 1 cuộc thi ở danh sách phía trên trước.', 'error');
       return;
     }
     entriesMsg.style.display = 'none';
@@ -520,7 +701,7 @@
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getEntries', password: password.value })
+        body: JSON.stringify({ action: 'getEntries', password: password.value, contestId: viewingContestId })
       });
       const data = await res.json();
       if(data.status !== 'success'){
@@ -562,7 +743,7 @@
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'deleteEntry', password: password.value, row })
+        body: JSON.stringify({ action: 'deleteEntry', password: password.value, contestId: viewingContestId, row })
       });
       const data = await res.json();
       if(data.status === 'success'){
