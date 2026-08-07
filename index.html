@@ -126,6 +126,36 @@
   }
   input[type="text"]::placeholder{ color: #b8ae98; }
 
+  select#contestSelect{
+    width:100%;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    background: #FFFEFB;
+    color: var(--ink);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b5346' stroke-width='2'><path d='M6 9l6 6 6-6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px;
+    padding-right: 40px;
+  }
+  select#contestSelect:focus{
+    border-color: var(--seal);
+    box-shadow: 0 0 0 3px rgba(169,52,42,0.12);
+  }
+  .contest-select-hint{
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+
   .dropzone{
     border: 1.5px dashed var(--line);
     border-radius: 10px;
@@ -487,6 +517,14 @@
     <div class="contest-window" id="contestWindow"></div>
 
     <form id="entryForm">
+      <div class="field" id="contestSelectField" style="display:none">
+        <label for="contestSelect">Chọn cuộc thi bạn muốn tham gia</label>
+        <select id="contestSelect" required>
+          <option value="" disabled selected>-- Chọn 1 cuộc thi --</option>
+        </select>
+        <div class="contest-select-hint" id="contestSelectHint"></div>
+      </div>
+
       <div class="field">
         <label for="fullName">Họ và tên</label>
         <input type="text" id="fullName" name="fullName" placeholder="Nhập họ và tên của bạn" required>
@@ -558,9 +596,7 @@
 </div>
 
 <script>
-  // ============================================================
-  // CẤU HÌNH: dán URL Web App (Google Apps Script) của bạn vào đây
-  // Xem hướng dẫn triển khai trong file Code.gs đi kèm.
+ 
   // ============================================================
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjBo6nvQ9HZ0-aboX-FME1scjHF6JdKbcscmlQX3yg7OSLWfNpLtlU6LZihgV2fchsOg/exec";
 
@@ -582,11 +618,33 @@
   const lockedView = document.getElementById('lockedView');
   const lockedTitle = document.getElementById('lockedTitle');
   const lockedText = document.getElementById('lockedText');
+  const contestSelectField = document.getElementById('contestSelectField');
+  const contestSelect = document.getElementById('contestSelect');
+  const contestSelectHint = document.getElementById('contestSelectHint');
+
+  let openContests = []; // danh sách cuộc thi đang mở nhận bài (có thể chọn)
 
   function formatVN(dateStr){
     if(!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleString('vi-VN', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+
+  function showLocked(title, text){
+    lockedTitle.textContent = title;
+    lockedText.textContent = text;
+    formWrap.classList.add('hide');
+    lockedView.classList.add('show');
+  }
+
+  function applySelectedContest(contest){
+    if(!contest) return;
+    contestTitle.textContent = (contest.contestName || 'NỘP BÀI DỰ THI').toUpperCase();
+    if(contest.openDate && contest.endDate){
+      contestWindow.textContent = `Thời gian nhận bài: ${formatVN(contest.openDate)} — ${formatVN(contest.endDate)}`;
+    } else {
+      contestWindow.textContent = '';
+    }
   }
 
   async function loadSettings(){
@@ -597,31 +655,69 @@
       const data = await res.json();
       if(data.status !== 'success') return;
 
-      if(data.contestName){
-        contestTitle.textContent = data.contestName.toUpperCase();
-      }
-
+      const contests = Array.isArray(data.contests) ? data.contests : [];
       const now = new Date();
-      const openDate = data.openDate ? new Date(data.openDate) : null;
-      const endDate = data.endDate ? new Date(data.endDate) : null;
 
-      if(openDate && endDate){
-        contestWindow.textContent = `Thời gian nhận bài: ${formatVN(data.openDate)} — ${formatVN(data.endDate)}`;
+      const withStatus = contests.map(c => {
+        const openDate = c.openDate ? new Date(c.openDate) : null;
+        const endDate = c.endDate ? new Date(c.endDate) : null;
+        let status = 'open';
+        if(openDate && now < openDate) status = 'upcoming';
+        else if(endDate && now > endDate) status = 'closed';
+        return { ...c, status };
+      });
+
+      openContests = withStatus.filter(c => c.status === 'open');
+
+      if(contests.length === 0){
+        showLocked('Chưa có cuộc thi nào', 'Hiện chưa có cuộc thi nào được thiết lập. Vui lòng quay lại sau.');
+        return;
       }
 
-      if(openDate && now < openDate){
-        lockedTitle.textContent = 'Chưa đến thời gian nộp bài';
-        lockedText.textContent = `Cuộc thi sẽ mở nhận bài lúc ${formatVN(data.openDate)}. Vui lòng quay lại sau.`;
-        formWrap.classList.add('hide');
-        lockedView.classList.add('show');
-      } else if(endDate && now > endDate){
-        lockedTitle.textContent = 'Đã kết thúc nhận bài';
-        lockedText.textContent = `Cuộc thi đã kết thúc nhận bài lúc ${formatVN(data.endDate)}. Cảm ơn bạn đã quan tâm.`;
-        formWrap.classList.add('hide');
-        lockedView.classList.add('show');
+      if(openContests.length === 0){
+        // Không có cuộc thi nào đang mở -> tìm cuộc thi sắp mở gần nhất để thông báo
+        const upcoming = withStatus
+          .filter(c => c.status === 'upcoming')
+          .sort((a,b) => new Date(a.openDate) - new Date(b.openDate))[0];
+
+        if(upcoming){
+          showLocked('Chưa đến thời gian nộp bài', `Cuộc thi "${upcoming.contestName}" sẽ mở nhận bài lúc ${formatVN(upcoming.openDate)}. Vui lòng quay lại sau.`);
+        } else {
+          showLocked('Đã kết thúc nhận bài', 'Tất cả cuộc thi hiện đã kết thúc nhận bài. Cảm ơn bạn đã quan tâm.');
+        }
+        return;
       }
+
+      if(openContests.length === 1){
+        // Chỉ 1 cuộc thi đang mở -> vào thẳng form, không cần chọn
+        contestSelectField.style.display = 'none';
+        contestSelect.required = false;
+        contestSelect.value = openContests[0].id;
+        applySelectedContest(openContests[0]);
+        return;
+      }
+
+      // Nhiều cuộc thi đang mở cùng lúc -> hiện ô chọn
+      contestTitle.textContent = 'NỘP BÀI DỰ THI';
+      contestWindow.textContent = '';
+      contestSelectField.style.display = 'block';
+      contestSelect.required = true;
+      contestSelectHint.textContent = `Hiện có ${openContests.length} cuộc thi đang nhận bài — vui lòng chọn đúng cuộc thi bạn muốn tham gia.`;
+
+      openContests.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.contestName;
+        contestSelect.appendChild(opt);
+      });
+
+      contestSelect.addEventListener('change', () => {
+        const chosen = openContests.find(c => c.id === contestSelect.value);
+        applySelectedContest(chosen);
+      });
+
     }catch(err){
-      console.error('Không tải được cấu hình cuộc thi:', err);
+      console.error('Không tải được danh sách cuộc thi:', err);
     }
   }
 
@@ -715,7 +811,9 @@
 
     const fullName = document.getElementById('fullName').value.trim();
     const file = fileInput.files[0];
+    const contestId = contestSelect.value;
 
+    if(!contestId){ showError('Vui lòng chọn cuộc thi bạn muốn tham gia.'); return; }
     if(!fullName){ showError('Vui lòng nhập họ và tên.'); return; }
     if(!file){ showError('Vui lòng chọn file dự thi.'); return; }
     if(file.size > 25 * 1024 * 1024){ showError('File quá lớn (tối đa 25MB).'); return; }
@@ -729,6 +827,7 @@
     try{
       const base64Data = await fileToBase64(file);
       const payload = {
+        contestId,
         fullName,
         fileName: file.name,
         fileType: file.type || 'application/octet-stream',
@@ -783,6 +882,10 @@
     successView.classList.remove('show');
     stamp.classList.remove('animate');
     formWrap.classList.remove('hide');
+    // form.reset() xoá luôn lựa chọn cuộc thi -> nếu chỉ có 1 cuộc thi đang mở, chọn lại tự động
+    if(openContests.length === 1){
+      contestSelect.value = openContests[0].id;
+    }
   });
 </script>
 </body>
