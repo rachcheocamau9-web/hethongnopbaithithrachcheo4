@@ -1,14 +1,17 @@
 /**
  * ==============================================================
  *  BACKEND NHẬN BÀI DỰ THI — Google Apps Script
- *  - Mỗi cuộc thi có 1 TAB (Sheet) riêng + 1 THƯ MỤC Drive riêng,
- *    tự động tạo khi admin bấm "TẠO CUỘC THI MỚI" trên admin.html
- *  - Ghi thông tin người nộp vào tab dữ liệu đang active
- *  - Quản lý "Tên cuộc thi / Ngày mở / Ngày kết thúc" qua admin.html
- *  - Admin: xem danh sách bài nộp + xoá bài không hợp lệ
- *  - Chặn 1 người nộp nhiều lần (so khớp theo họ và tên, trong cuộc thi hiện tại)
+ *  - Hỗ trợ NHIỀU CUỘC THI chạy SONG SONG cùng lúc, mỗi cuộc thi có
+ *    1 TAB (Sheet) riêng + 1 THƯ MỤC Drive riêng, tự động tạo khi
+ *    admin bấm "TẠO CUỘC THI MỚI" trên admin.html
+ *  - Người nộp bài chọn đúng cuộc thi (nếu có nhiều cuộc thi đang mở)
+ *    rồi mới nộp — không bị lẫn dữ liệu giữa các cuộc thi
+ *  - Admin: xem danh sách bài nộp + xoá bài không hợp lệ theo từng cuộc thi
+ *  - Chặn 1 người nộp nhiều lần trong CÙNG 1 cuộc thi (so khớp theo họ và tên)
  *
  *  Thứ tự cột mỗi tab dữ liệu: A=Stt | B=Họ và tên | C=Link file | D=Thời gian nộp
+ *  Thứ tự cột tab CaiDat (danh sách cuộc thi):
+ *    A=ID | B=Tên cuộc thi | C=Ngày mở | D=Ngày kết thúc | E=Sheet dữ liệu | F=Folder ID
  * ==============================================================
  *
  * CÁCH CÀI ĐẶT:
@@ -27,34 +30,38 @@
  *    trong CẢ 2 file: index.html VÀ admin.html.
  *
  * Tab "CaiDat" sẽ được TỰ ĐỘNG tạo trong lần chạy đầu tiên, không
- * cần tạo tay. Lần đầu tiên hệ thống dùng luôn Sheet đang active mặc
- * định (Sheet1) và FOLDER_ID làm nơi lưu — admin có thể bấm
- * "TẠO CUỘC THI MỚI" bất cứ lúc nào để chuyển sang tab + thư mục mới.
+ * cần tạo tay. Vào admin.html, đăng nhập, bấm "TẠO CUỘC THI MỚI" để
+ * thêm 1 cuộc thi — có thể tạo bao nhiêu cuộc thi cũng được, chạy
+ * song song cùng lúc.
+ *
+ * ⚠️ NÂNG CẤP TỪ BẢN CŨ (chỉ có 1 cuộc thi active): nếu Google Sheet
+ * của bạn đã có tab "CaiDat" theo cấu trúc cũ (5 cột), hãy XOÁ tab đó
+ * đi (chuột phải vào tab -> Delete) rồi chạy lại — hệ thống sẽ tự tạo
+ * lại tab CaiDat theo cấu trúc mới (6 cột). Các tab dữ liệu bài nộp cũ
+ * và Drive không bị ảnh hưởng.
  * ==============================================================
  */
 
 const SHEET_ID = '1oZwEdTrl_NDaeH5vbrAhRop13_coZyNKbLhjXL9n0u4';
-const SHEET_NAME = 'Sheet1';          // tab dữ liệu mặc định (dùng khi chưa tạo cuộc thi nào)
-const SETTINGS_SHEET_NAME = 'CaiDat'; // tab chứa cấu hình cuộc thi (tự tạo)
+const SETTINGS_SHEET_NAME = 'CaiDat'; // tab chứa danh sách cuộc thi (tự tạo)
 const FOLDER_ID = '1w4QAeUANi9_M0e8kjGbAjgSmYwPaOPNU'; // thư mục CHA chứa các thư mục con của từng cuộc thi
 const ADMIN_PASSWORD = '1231987';
 
 const DATA_HEADER = ['Stt', 'Họ và tên', 'Link file', 'Thời gian nộp'];
+const SETTINGS_HEADER = ['ID', 'Tên cuộc thi', 'Ngày mở', 'Ngày kết thúc', 'Sheet dữ liệu', 'Folder ID'];
 
 // ============================== doGet ==============================
-// Chỉ dùng để lấy cấu hình cuộc thi (tên, ngày mở, ngày kết thúc) — công khai,
-// vì thông tin này vốn đã hiển thị sẵn trên trang nộp bài.
+// Trả về danh sách TẤT CẢ cuộc thi (công khai: tên + ngày mở/đóng) để
+// trang nộp bài hiển thị / cho người dùng chọn cuộc thi muốn tham gia.
 function doGet(e) {
   const action = e.parameter.action;
   if (action === 'getSettings') {
-    return jsonOutput(getSettings());
+    return jsonOutput(getPublicContestList());
   }
   return jsonOutput({ status: 'error', message: 'Action không hợp lệ.' });
 }
 
 // ============================== doPost ==============================
-// Xử lý các yêu cầu: nộp bài (mặc định), tạo cuộc thi mới, cập nhật cấu hình,
-// xem/xoá danh sách (admin).
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
@@ -63,6 +70,7 @@ function doPost(e) {
     if (action === 'verifyPassword') return verifyPassword(data);
     if (action === 'createContest') return createContest(data);
     if (action === 'updateSettings') return updateSettings(data);
+    if (action === 'listContestsAdmin') return listContestsAdmin(data);
     if (action === 'getEntries') return getEntries(data);
     if (action === 'deleteEntry') return deleteEntry(data);
 
@@ -73,38 +81,37 @@ function doPost(e) {
   }
 }
 
-// Chỉ dùng để kiểm tra mật khẩu cho màn hình đăng nhập trang admin.html.
-function verifyPassword(data) {
-  if (data.password !== ADMIN_PASSWORD) {
-    return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
-  }
-  return jsonOutput({ status: 'success' });
-}
-
 // ---------------------- Nộp bài dự thi ----------------------
 function submitEntry(data) {
   const fullName = (data.fullName || '').toString().trim();
   const fileName = (data.fileName || 'bai-du-thi').toString();
   const fileType = data.fileType || 'application/octet-stream';
   const fileData = data.fileData;
+  const contestId = (data.contestId || '').toString().trim();
 
   if (!fullName || !fileData) {
     return jsonOutput({ status: 'error', message: 'Thiếu dữ liệu.' });
   }
+  if (!contestId) {
+    return jsonOutput({ status: 'error', message: 'Vui lòng chọn cuộc thi bạn muốn tham gia.' });
+  }
 
-  const cfg = getActiveConfig();
+  const contest = getContestById(contestId);
+  if (!contest) {
+    return jsonOutput({ status: 'error', message: 'Cuộc thi không tồn tại hoặc đã bị gỡ.' });
+  }
+
   const now = new Date();
-  if (cfg.openDate && now < new Date(cfg.openDate)) {
+  if (contest.openDate && now < new Date(contest.openDate)) {
     return jsonOutput({ status: 'error', message: 'Cuộc thi chưa đến thời gian nhận bài.' });
   }
-  if (cfg.endDate && now > new Date(cfg.endDate)) {
+  if (contest.endDate && now > new Date(contest.endDate)) {
     return jsonOutput({ status: 'error', message: 'Cuộc thi đã kết thúc nhận bài.' });
   }
 
-  const sheet = getActiveDataSheet(cfg);
+  const sheet = getOrCreateDataSheet(contest.sheetName);
 
-  // Kiểm tra người này đã nộp bài trước đó chưa (so khớp theo họ và tên,
-  // chỉ trong phạm vi cuộc thi hiện tại)
+  // Kiểm tra người này đã nộp bài trước đó chưa TRONG CUỘC THI NÀY
   if (hasAlreadySubmitted(fullName, sheet)) {
     return jsonOutput({
       status: 'error',
@@ -113,8 +120,8 @@ function submitEntry(data) {
     });
   }
 
-  // 1) Lưu file vào Google Drive (thư mục riêng của cuộc thi hiện tại)
-  const folder = DriveApp.getFolderById(cfg.activeFolderId);
+  // 1) Lưu file vào Google Drive (thư mục riêng của cuộc thi này)
+  const folder = DriveApp.getFolderById(contest.folderId);
   const blob = Utilities.newBlob(
     Utilities.base64Decode(fileData),
     fileType,
@@ -151,40 +158,86 @@ function hasAlreadySubmitted(fullName, sheet) {
   return names.some(row => normalizeName(row[0]) === target);
 }
 
-// ---------------------- Cấu hình cuộc thi (admin) ----------------------
+// ---------------------- Xác thực admin ----------------------
+function verifyPassword(data) {
+  if (data.password !== ADMIN_PASSWORD) {
+    return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
+  }
+  return jsonOutput({ status: 'success' });
+}
 
-// Đọc đầy đủ cấu hình đang active, kèm tên sheet + folder Drive đang dùng.
-// Dùng nội bộ cho submit/getEntries/deleteEntry/createContest.
-function getActiveConfig() {
+// ---------------------- Danh sách cuộc thi (CaiDat) ----------------------
+
+function getOrCreateSettingsSheet() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
+    sheet.getRange(1, 1, 1, SETTINGS_HEADER.length).setValues([SETTINGS_HEADER]);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+// Đọc toàn bộ danh sách cuộc thi (nội bộ — có kèm sheetName/folderId).
+function getAllContests() {
   const sheet = getOrCreateSettingsSheet();
-  const values = sheet.getRange(2, 1, 1, 5).getValues()[0];
-  return {
-    contestName: values[0] ? values[0].toString() : '',
-    openDate: values[1] ? new Date(values[1]).toISOString() : '',
-    endDate: values[2] ? new Date(values[2]).toISOString() : '',
-    activeSheetName: values[3] ? values[3].toString() : SHEET_NAME,
-    activeFolderId: values[4] ? values[4].toString() : FOLDER_ID
-  };
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  const values = sheet.getRange(2, 1, lastRow - 1, SETTINGS_HEADER.length).getValues();
+  return values
+    .map((row, idx) => ({
+      row: idx + 2,
+      id: row[0] ? row[0].toString() : '',
+      contestName: row[1] ? row[1].toString() : '',
+      openDate: row[2] ? new Date(row[2]).toISOString() : '',
+      endDate: row[3] ? new Date(row[3]).toISOString() : '',
+      sheetName: row[4] ? row[4].toString() : '',
+      folderId: row[5] ? row[5].toString() : ''
+    }))
+    .filter(c => c.id); // bỏ dòng trống
 }
 
-// Bản công khai (doGet) — chỉ trả tên cuộc thi + ngày mở/đóng, không lộ sheet/folder nội bộ.
-function getSettings() {
-  const cfg = getActiveConfig();
-  return {
-    status: 'success',
-    contestName: cfg.contestName,
-    openDate: cfg.openDate,
-    endDate: cfg.endDate
-  };
+function getContestById(id) {
+  return getAllContests().find(c => c.id === id) || null;
 }
 
-// Sửa tên/ngày của cuộc thi ĐANG active — KHÔNG tạo sheet/folder mới.
+// Bản công khai (doGet) — chỉ trả tên/ngày, không lộ sheetName/folderId nội bộ.
+function getPublicContestList() {
+  const contests = getAllContests().map(c => ({
+    id: c.id,
+    contestName: c.contestName,
+    openDate: c.openDate,
+    endDate: c.endDate
+  }));
+  return { status: 'success', contests: contests };
+}
+
+// Bản đầy đủ cho admin (yêu cầu mật khẩu) — không lộ folderId ra ngoài nhưng
+// vẫn cần cho các thao tác quản trị, nên trả kèm.
+function listContestsAdmin(data) {
+  if (data.password !== ADMIN_PASSWORD) {
+    return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
+  }
+  return jsonOutput({ status: 'success', contests: getAllContests() });
+}
+
+// Sửa tên/ngày của 1 cuộc thi đã có (theo id) — KHÔNG tạo sheet/folder mới.
 function updateSettings(data) {
   if (data.password !== ADMIN_PASSWORD) {
     return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
   }
+  const contestId = (data.contestId || '').toString().trim();
+  if (!contestId) {
+    return jsonOutput({ status: 'error', message: 'Thiếu ID cuộc thi cần sửa.' });
+  }
   const sheet = getOrCreateSettingsSheet();
-  sheet.getRange(2, 1, 1, 3).setValues([[
+  const contests = getAllContests();
+  const target = contests.find(c => c.id === contestId);
+  if (!target) {
+    return jsonOutput({ status: 'error', message: 'Không tìm thấy cuộc thi cần sửa.' });
+  }
+  sheet.getRange(target.row, 2, 1, 3).setValues([[
     (data.contestName || '').toString(),
     data.openDate ? new Date(data.openDate) : '',
     data.endDate ? new Date(data.endDate) : ''
@@ -193,8 +246,8 @@ function updateSettings(data) {
 }
 
 // Tạo 1 CUỘC THI MỚI: tự động tạo 1 Sheet mới + 1 Folder Drive mới (đặt tên
-// theo tên cuộc thi), rồi chuyển "active" sang sheet/folder vừa tạo.
-// Dữ liệu của (các) cuộc thi cũ vẫn giữ nguyên trong sheet/folder cũ, không mất.
+// theo tên cuộc thi), thêm 1 dòng mới vào CaiDat — KHÔNG đụng tới các
+// cuộc thi khác đang có, nên nhiều cuộc thi có thể cùng chạy song song.
 function createContest(data) {
   if (data.password !== ADMIN_PASSWORD) {
     return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
@@ -216,18 +269,21 @@ function createContest(data) {
   const parentFolder = DriveApp.getFolderById(FOLDER_ID);
   const newFolder = parentFolder.createFolder(contestName);
 
-  // 3) Cập nhật CaiDat: chuyển active sang sheet/folder vừa tạo
+  // 3) Thêm 1 dòng mới vào CaiDat (KHÔNG ghi đè các cuộc thi khác)
+  const contestId = 'c' + new Date().getTime();
   const settingsSheet = getOrCreateSettingsSheet();
-  settingsSheet.getRange(2, 1, 1, 5).setValues([[
+  settingsSheet.appendRow([
+    contestId,
     contestName,
     data.openDate ? new Date(data.openDate) : '',
     data.endDate ? new Date(data.endDate) : '',
     sheetName,
     newFolder.getId()
-  ]]);
+  ]);
 
   return jsonOutput({
     status: 'success',
+    id: contestId,
     sheetName: sheetName,
     folderId: newFolder.getId(),
     folderUrl: newFolder.getUrl()
@@ -253,29 +309,12 @@ function uniqueSheetName(ss, baseName) {
   return name;
 }
 
-function getOrCreateSettingsSheet() {
+// Lấy đúng Sheet dữ liệu theo tên (tự tạo lại nếu lỡ bị xoá tay trên Sheets).
+function getOrCreateDataSheet(sheetName) {
   const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName(SETTINGS_SHEET_NAME);
+  let sheet = ss.getSheetByName(sheetName);
   if (!sheet) {
-    sheet = ss.insertSheet(SETTINGS_SHEET_NAME);
-    sheet.getRange(1, 1, 1, 5).setValues([[
-      'Tên cuộc thi', 'Ngày mở', 'Ngày kết thúc', 'Sheet đang dùng', 'Folder ID đang dùng'
-    ]]);
-    const now = new Date();
-    const in30days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    sheet.getRange(2, 1, 1, 5).setValues([[
-      'Cuộc thi dự thi', now, in30days, SHEET_NAME, FOLDER_ID
-    ]]);
-  }
-  return sheet;
-}
-
-// Lấy đúng Sheet dữ liệu đang active (tự tạo lại nếu lỡ bị xoá tay trên Sheets).
-function getActiveDataSheet(cfg) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  let sheet = ss.getSheetByName(cfg.activeSheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(cfg.activeSheetName);
+    sheet = ss.insertSheet(sheetName);
     sheet.getRange(1, 1, 1, DATA_HEADER.length).setValues([DATA_HEADER]);
     sheet.setFrozenRows(1);
   }
@@ -283,17 +322,21 @@ function getActiveDataSheet(cfg) {
 }
 
 // ---------------------- Danh sách bài nộp (admin) ----------------------
-// Trả về toàn bộ danh sách bài đã nộp CỦA CUỘC THI ĐANG ACTIVE,
+// Trả về toàn bộ danh sách bài đã nộp CỦA 1 CUỘC THI CỤ THỂ (theo contestId),
 // kèm số dòng thật trên Sheet (để xoá đúng dòng).
 function getEntries(data) {
   if (data.password !== ADMIN_PASSWORD) {
     return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
   }
-  const cfg = getActiveConfig();
-  const sheet = getActiveDataSheet(cfg);
+  const contestId = (data.contestId || '').toString().trim();
+  const contest = getContestById(contestId);
+  if (!contest) {
+    return jsonOutput({ status: 'error', message: 'Không tìm thấy cuộc thi.' });
+  }
+  const sheet = getOrCreateDataSheet(contest.sheetName);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
-    return jsonOutput({ status: 'success', entries: [], sheetName: cfg.activeSheetName });
+    return jsonOutput({ status: 'success', entries: [], contestName: contest.contestName });
   }
   const values = sheet.getRange(2, 1, lastRow - 1, 4).getValues();
   const entries = values.map((row, idx) => ({
@@ -303,21 +346,25 @@ function getEntries(data) {
     fileUrl: row[2],
     submittedAt: row[3] ? new Date(row[3]).toISOString() : ''
   }));
-  return jsonOutput({ status: 'success', entries: entries, sheetName: cfg.activeSheetName });
+  return jsonOutput({ status: 'success', entries: entries, contestName: contest.contestName });
 }
 
-// Xoá 1 dòng bài nộp (trong sheet đang active) theo số dòng thật trên Sheet,
+// Xoá 1 dòng bài nộp (của 1 cuộc thi cụ thể) theo số dòng thật trên Sheet,
 // sau đó đánh lại Stt cho liền mạch.
 function deleteEntry(data) {
   if (data.password !== ADMIN_PASSWORD) {
     return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
   }
+  const contestId = (data.contestId || '').toString().trim();
+  const contest = getContestById(contestId);
+  if (!contest) {
+    return jsonOutput({ status: 'error', message: 'Không tìm thấy cuộc thi.' });
+  }
   const rowIndex = parseInt(data.row, 10);
   if (!rowIndex || rowIndex < 2) {
     return jsonOutput({ status: 'error', message: 'Dòng không hợp lệ.' });
   }
-  const cfg = getActiveConfig();
-  const sheet = getActiveDataSheet(cfg);
+  const sheet = getOrCreateDataSheet(contest.sheetName);
   sheet.deleteRow(rowIndex);
   renumberStt(sheet);
   return jsonOutput({ status: 'success' });
