@@ -22,9 +22,11 @@ robots.txt      -> chặn công cụ tìm kiếm index trang /admin
   bỏ khoảng trắng thừa).
 - **Thông báo nổi (toast)**: mọi lỗi khi nộp bài đều hiện thành banner đỏ nổi
   lên đầu màn hình, tự ẩn sau 5 giây hoặc bấm ✕ để đóng.
-- **Đa cuộc thi**: mỗi lần admin bấm "TẠO CUỘC THI MỚI", hệ thống tự động tạo
-  1 tab (Sheet) dữ liệu mới + 1 thư mục Drive mới đặt tên theo tên cuộc thi.
-  Dữ liệu của cuộc thi cũ vẫn được giữ nguyên, không bị mất hay ghi đè.
+- **Đa cuộc thi — chạy SONG SONG cùng lúc**: admin có thể tạo bao nhiêu cuộc thi
+  cũng được, mỗi cuộc thi có 1 tab (Sheet) + 1 thư mục Drive riêng. Nếu có từ 2
+  cuộc thi đang mở nhận bài trở lên, trang nộp bài sẽ hiện thêm ô cho người
+  dùng chọn đúng cuộc thi họ muốn tham gia. Admin xem/sửa/theo dõi từng cuộc
+  thi độc lập trong 1 danh sách ở trang quản trị.
 - **Trang quản trị có màn hình đăng nhập**: `/admin` chỉ hiện ô nhập mật khẩu;
   mọi thiết lập/chức năng khác chỉ hiện ra sau khi xác thực đúng mật khẩu.
   Mật khẩu chỉ cần nhập 1 lần, dùng ngầm cho các thao tác sau đó trong phiên
@@ -39,6 +41,10 @@ robots.txt      -> chặn công cụ tìm kiếm index trang /admin
    - `FOLDER_ID`: ID thư mục Drive dùng làm **thư mục CHA** — mỗi cuộc thi
      tạo mới sẽ có 1 thư mục con nằm bên trong thư mục cha này.
    - `ADMIN_PASSWORD`: mật khẩu quản trị của bạn.
+4. ⚠️ Nếu Google Sheet của bạn **đã từng dùng bản cũ** (chỉ hỗ trợ 1 cuộc thi
+   active), hãy xoá tab `CaiDat` cũ đi (chuột phải vào tab → Delete) trước
+   khi deploy — hệ thống sẽ tự tạo lại tab `CaiDat` theo cấu trúc mới (hỗ
+   trợ nhiều cuộc thi). Các tab dữ liệu bài nộp cũ và Drive không bị ảnh hưởng.
 4. Vì `index.html`/`admin.html` sẽ public trên GitHub nên **không** để lộ
    thông tin nhạy cảm nào khác trong 2 file này (mật khẩu, SHEET_ID, FOLDER_ID
    chỉ nằm trong `Code.gs`, không nằm trong 2 file HTML).
@@ -77,17 +83,24 @@ lớp giao diện, không phải lớp bảo mật duy nhất. Nếu muốn ch�
 thể bật "Vercel Password Protection" hoặc "Deployment Protection" trong
 phần Settings của project trên Vercel (tính năng trả phí ở một số gói).
 
-## Cách hoạt động của tính năng "Đa cuộc thi"
-- Tab `CaiDat` trong Google Sheet lưu cấu hình: tên cuộc thi, ngày mở/đóng,
-  và **tên tab + ID thư mục Drive đang active** (đang được dùng để nhận bài).
+## Cách hoạt động của tính năng "Đa cuộc thi (chạy song song)"
+- Tab `CaiDat` trong Google Sheet lưu **danh sách tất cả cuộc thi** (mỗi dòng
+  là 1 cuộc thi): ID, tên cuộc thi, ngày mở/đóng, tên tab dữ liệu, ID thư mục
+  Drive riêng của cuộc thi đó.
 - Khi admin bấm **"TẠO CUỘC THI MỚI"**: hệ thống tạo 1 tab mới (tên theo tên
   cuộc thi, tự thêm hậu tố nếu trùng tên tab) + 1 thư mục Drive mới (nằm
-  trong `FOLDER_ID`), rồi cập nhật "đang active" trỏ sang tab/thư mục mới đó.
-- Khi admin chỉ bấm **"LƯU THIẾT LẬP"** (không tạo mới): chỉ sửa tên/ngày
-  của cuộc thi hiện tại, KHÔNG tạo tab/thư mục mới.
-- Toàn bộ dữ liệu (bài nộp) của các cuộc thi cũ vẫn nằm nguyên trong tab/thư
-  mục cũ — admin có thể tự vào Google Sheet/Drive xem lại bất cứ lúc nào,
-  chỉ là trang `/admin` chỉ thao tác lên cuộc thi đang active.
+  trong `FOLDER_ID`), rồi **thêm 1 dòng mới** vào `CaiDat` — không đụng đến
+  các cuộc thi khác đang có, nên có thể chạy song song bao nhiêu cuộc thi
+  cũng được.
+- Khi admin bấm **"Sửa"** ở 1 cuộc thi trong danh sách: chỉ sửa tên/ngày của
+  đúng cuộc thi đó, không ảnh hưởng các cuộc thi khác.
+- Trang nộp bài (`index.html`): nếu chỉ có **1 cuộc thi đang mở**, vào thẳng
+  form nộp bài của cuộc thi đó. Nếu có **từ 2 cuộc thi đang mở trở lên**,
+  hiện thêm ô chọn để người nộp bài chọn đúng cuộc thi họ muốn tham gia.
+  Nếu không có cuộc thi nào đang mở (chỉ có cuộc thi sắp mở hoặc đã đóng),
+  hiện thông báo phù hợp (sắp mở lúc nào, hoặc đã kết thúc hết).
+- Trang quản trị (`admin.html`): admin bấm **"Bài nộp"** ở 1 cuộc thi cụ thể
+  trong danh sách để xem/xoá bài nộp của đúng cuộc thi đó.
 
 ## Mỗi lần cần cập nhật code
 1. Sửa file cần thiết (`index.html`, `admin.html`, hoặc `Code.gs`).
