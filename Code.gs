@@ -73,6 +73,7 @@ function doPost(e) {
     if (action === 'verifyPassword') return verifyPassword(data);
     if (action === 'createContest') return createContest(data);
     if (action === 'updateSettings') return updateSettings(data);
+    if (action === 'deleteContest') return deleteContest(data);
     if (action === 'listContestsAdmin') return listContestsAdmin(data);
     if (action === 'getEntries') return getEntries(data);
     if (action === 'deleteEntry') return deleteEntry(data);
@@ -272,7 +273,34 @@ function updateSettings(data) {
   return jsonOutput({ status: 'success' });
 }
 
-// Tạo 1 CUỘC THI MỚI: tự động tạo 1 Sheet mới + 1 Folder Drive mới (đặt tên
+// Xóa 1 CUỘC THI khỏi danh sách quản trị (tab CaiDat) — CHỈ xóa dòng cấu
+// hình, KHÔNG đụng đến tab Sheet dữ liệu bài nộp hay folder Drive của cuộc
+// thi đó. Dữ liệu bài nộp vẫn còn nguyên trong Google Sheets/Drive, chỉ là
+// cuộc thi sẽ không còn hiện trong trang nộp bài / trang admin / trang xem
+// kết quả nữa.
+function deleteContest(data) {
+  if (data.password !== ADMIN_PASSWORD) {
+    return jsonOutput({ status: 'error', message: 'Sai mật khẩu quản trị.' });
+  }
+  const contestId = (data.contestId || '').toString().trim();
+  if (!contestId) {
+    return jsonOutput({ status: 'error', message: 'Thiếu ID cuộc thi cần xoá.' });
+  }
+  const sheet = getOrCreateSettingsSheet();
+  const contests = getAllContests();
+  const target = contests.find(c => c.id === contestId);
+  if (!target) {
+    return jsonOutput({ status: 'error', message: 'Không tìm thấy cuộc thi cần xoá.' });
+  }
+  sheet.deleteRow(target.row);
+  return jsonOutput({
+    status: 'success',
+    contestName: target.contestName,
+    sheetName: target.sheetName
+  });
+}
+
+
 // theo tên cuộc thi), thêm 1 dòng mới vào CaiDat — KHÔNG đụng tới các
 // cuộc thi khác đang có, nên nhiều cuộc thi có thể cùng chạy song song.
 function createContest(data) {
