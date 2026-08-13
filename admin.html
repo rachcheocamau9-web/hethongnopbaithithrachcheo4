@@ -149,6 +149,7 @@
   }
   .row-actions button:hover{ background:#F1EBDC; color:var(--ink); }
   .row-actions button.view-btn:hover{ color:var(--seal); }
+  .row-actions button.delete-btn:hover{ background:#F8EDE9; color:var(--seal); }
   .contests-empty{ font-size:13px; color:var(--ink-soft); text-align:center; padding:16px 0; }
   .editing-banner{
     display:flex; align-items:center; justify-content:space-between;
@@ -495,6 +496,7 @@
           <div class="row-actions">
             <button class="edit-btn" data-id="${c.id}">Sửa</button>
             <button class="view-btn" data-id="${c.id}">Bài nộp</button>
+            <button class="delete-btn" data-id="${c.id}" data-name="${escapeHtml(c.contestName)}">Xoá</button>
           </div>
         </td>
       `;
@@ -505,9 +507,48 @@
   contestsBody.addEventListener('click', (e) => {
     const editBtn = e.target.closest('.edit-btn');
     const viewBtn = e.target.closest('.view-btn');
+    const deleteBtn = e.target.closest('.delete-btn');
     if(editBtn) enterEditMode(editBtn.dataset.id);
     if(viewBtn) selectContestForEntries(viewBtn.dataset.id);
+    if(deleteBtn) handleDeleteContest(deleteBtn.dataset.id, deleteBtn.dataset.name);
   });
+
+  async function handleDeleteContest(id, name){
+    const confirmed = confirm(
+      `Xoá cuộc thi "${name}" khỏi danh sách quản trị?\n\n` +
+      `Tab dữ liệu bài nộp và thư mục Drive của cuộc thi này sẽ được GIỮ NGUYÊN, ` +
+      `chỉ không còn hiện trong trang nộp bài / trang admin / trang xem kết quả nữa.`
+    );
+    if(!confirmed) return;
+
+    contestsMsg.style.display = 'none';
+    try{
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'deleteContest', password: password.value, contestId: id })
+      });
+      const data = await res.json();
+      if(data.status === 'success'){
+        // Nếu đang sửa / đang xem bài nộp của đúng cuộc thi vừa xoá thì thoát chế độ đó
+        if(editingContestId === id) exitEditMode();
+        if(viewingContestId === id){
+          viewingContestId = '';
+          activeContestNote.style.display = 'none';
+          entriesSectionSub.style.display = 'block';
+          entriesWrap.style.display = 'none';
+          loadEntriesBtn.disabled = true;
+        }
+        showContestsMsg(`Đã xoá "${data.contestName}" khỏi danh sách. Dữ liệu trong tab "${data.sheetName}" vẫn còn nguyên.`, 'success');
+        loadContestsList();
+      } else {
+        showContestsMsg(data.message || 'Không thể xoá cuộc thi.', 'error');
+      }
+    }catch(err){
+      console.error(err);
+      showContestsMsg('Có lỗi khi xoá cuộc thi. Vui lòng thử lại.', 'error');
+    }
+  }
 
   // ---------------------- Chế độ Tạo mới / Sửa cuộc thi ----------------------
   function enterEditMode(id){
