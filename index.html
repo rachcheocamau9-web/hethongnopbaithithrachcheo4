@@ -503,12 +503,172 @@
   .modal-card .btn{
     margin-top: 0;
   }
+
+  /* ---------- Tabs (Nộp bài / Xem kết quả) ---------- */
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin: 4px 0 26px;
+  }
+  .tab-btn{
+    flex:1;
+    padding: 10px 6px;
+    border-radius: 9px;
+    border: 1.5px solid var(--line);
+    background: #FBF7EC;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+    cursor: pointer;
+    text-align: center;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .tab-btn:hover{ border-color: var(--gold); }
+  .tab-btn.active{
+    background: linear-gradient(180deg, var(--seal) 0%, var(--seal-dark) 100%);
+    color: #fff;
+    border-color: var(--seal-dark);
+    box-shadow: 0 8px 18px -10px rgba(169,52,42,0.55);
+  }
+
+  /* ---------- Results (Xem kết quả) ---------- */
+  .results-wrap{ display:none; }
+  .results-wrap.show{ display:block; }
+
+  .year-pills{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin: -4px 0 20px;
+  }
+  .year-pill{
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1.5px solid var(--line);
+    background: #FBF7EC;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .year-pill:hover{ border-color: var(--gold); }
+  .year-pill.active{
+    background: var(--seal);
+    color: #fff;
+    border-color: var(--seal-dark);
+  }
+
+  .contest-list-item{
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    background: #FFFEFB;
+    transition: border-color .15s ease, background .15s ease, transform .1s ease;
+  }
+  .contest-list-item:hover{
+    border-color: var(--gold);
+    background: #FBF4E2;
+    transform: translateY(-1px);
+  }
+  .clname{
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .cldate{
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .status-badge{
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-left: 6px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .status-open{ background:#e4f3e6; color:#2f7a3d; }
+  .status-upcoming{ background:#fdf0d9; color:#a9740f; }
+  .status-closed{ background:#f1ece0; color:#8a8171; }
+
+  .entries-back{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    margin-bottom: 18px;
+    width: fit-content;
+  }
+  .entries-back:hover{ color: var(--seal); }
+
+  .entries-title{
+    font-family: 'Noto Serif', serif;
+    font-size: 19px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--ink);
+    margin: 0 0 4px;
+  }
+  .entries-count{
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-bottom: 18px;
+  }
+  .entries-list{
+    max-height: 360px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .entry-row{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .entry-row:last-child{ border-bottom: none; }
+  .entry-row .idx{
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 12px;
+    width: 22px;
+    flex: 0 0 auto;
+  }
+  .entry-empty{
+    text-align: center;
+    padding: 30px 10px;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+  }
 </style>
 </head>
 <body>
 
 <div class="card">
   <div class="perforation"></div>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" id="tabSubmitBtn">Nộp bài dự thi</button>
+    <button type="button" class="tab-btn" id="tabResultsBtn">Xem kết quả</button>
+  </div>
+
+  <div id="submitModeWrap">
 
   <div class="form-wrap" id="formWrap">
     <div class="eyebrow" id="eyebrow">Cuộc thi</div>
@@ -573,6 +733,25 @@
     <h2>🎉 Chúc mừng!</h2>
     <p>Bạn <b id="successName">đã</b> nộp bài thành công.<br>Cảm ơn bạn đã tham gia cuộc thi.</p>
     <button class="btn btn-secondary" id="resetBtn">Nộp bài khác</button>
+  </div>
+
+  </div><!-- /submitModeWrap -->
+
+  <div class="results-wrap" id="resultsWrap">
+    <div id="yearScreen">
+      <div class="eyebrow">Kết quả tham gia</div>
+      <h1>XEM KẾT QUẢ CUỘC THI</h1>
+      <div class="rule"></div>
+      <div class="year-pills" id="yearPills"></div>
+      <div id="contestListForYear"></div>
+    </div>
+
+    <div id="entriesScreen" style="display:none">
+      <div class="entries-back" id="entriesBackBtn">← Quay lại danh sách cuộc thi</div>
+      <div class="entries-title" id="entriesTitle"></div>
+      <div class="entries-count" id="entriesCount"></div>
+      <div class="entries-list" id="entriesList"></div>
+    </div>
   </div>
 
   <div class="perforation bottom"></div>
@@ -692,6 +871,12 @@
         // Chỉ 1 cuộc thi đang mở -> vào thẳng form, không cần chọn
         contestSelectField.style.display = 'none';
         contestSelect.required = false;
+        // Phải tạo option tương ứng trước khi gán value, nếu không select
+        // sẽ không có option nào khớp và value sẽ bị bỏ trống -> không nộp được.
+        const onlyOpt = document.createElement('option');
+        onlyOpt.value = openContests[0].id;
+        onlyOpt.textContent = openContests[0].contestName;
+        contestSelect.appendChild(onlyOpt);
         contestSelect.value = openContests[0].id;
         applySelectedContest(openContests[0]);
         return;
@@ -886,6 +1071,191 @@
     if(openContests.length === 1){
       contestSelect.value = openContests[0].id;
     }
+  });
+
+  // ============================================================
+  //  TAB "XEM KẾT QUẢ" — chọn năm rồi xem danh sách người đã nộp bài
+  //  của từng cuộc thi trong năm đó. Năm hiện tại luôn tự động nổi
+  //  lên (được chọn sẵn) khi mở tab này.
+  // ============================================================
+  const tabSubmitBtn = document.getElementById('tabSubmitBtn');
+  const tabResultsBtn = document.getElementById('tabResultsBtn');
+  const submitModeWrap = document.getElementById('submitModeWrap');
+  const resultsWrap = document.getElementById('resultsWrap');
+  const yearScreen = document.getElementById('yearScreen');
+  const entriesScreen = document.getElementById('entriesScreen');
+  const yearPillsEl = document.getElementById('yearPills');
+  const contestListForYearEl = document.getElementById('contestListForYear');
+  const entriesBackBtn = document.getElementById('entriesBackBtn');
+  const entriesTitleEl = document.getElementById('entriesTitle');
+  const entriesCountEl = document.getElementById('entriesCount');
+  const entriesListEl = document.getElementById('entriesList');
+
+  let allContestsCache = null; // toàn bộ cuộc thi mọi năm, tải 1 lần rồi dùng lại
+  let selectedYear = null;
+
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+
+  function getContestStatus(c){
+    const now = new Date();
+    const openDate = c.openDate ? new Date(c.openDate) : null;
+    const endDate = c.endDate ? new Date(c.endDate) : null;
+    if(openDate && now < openDate) return 'upcoming';
+    if(endDate && now > endDate) return 'closed';
+    return 'open';
+  }
+  const STATUS_LABEL = { open: 'Đang mở', upcoming: 'Sắp mở', closed: 'Đã đóng' };
+
+  function showSubmitMode(){
+    tabSubmitBtn.classList.add('active');
+    tabResultsBtn.classList.remove('active');
+    submitModeWrap.style.display = '';
+    resultsWrap.classList.remove('show');
+  }
+
+  function showResultsMode(){
+    tabResultsBtn.classList.add('active');
+    tabSubmitBtn.classList.remove('active');
+    submitModeWrap.style.display = 'none';
+    resultsWrap.classList.add('show');
+    entriesScreen.style.display = 'none';
+    yearScreen.style.display = 'block';
+    loadResultsData();
+  }
+
+  tabSubmitBtn.addEventListener('click', showSubmitMode);
+  tabResultsBtn.addEventListener('click', showResultsMode);
+
+  async function loadResultsData(){
+    if(allContestsCache){ renderYearPills(); return; }
+    yearPillsEl.innerHTML = '';
+    contestListForYearEl.innerHTML = '<div class="entry-empty">Đang tải danh sách...</div>';
+
+    if(SCRIPT_URL.includes('PASTE_YOUR')){
+      contestListForYearEl.innerHTML = '<div class="entry-empty">Chưa cấu hình SCRIPT_URL.</div>';
+      return;
+    }
+
+    try{
+      const res = await fetch(`${SCRIPT_URL}?action=getSettings`);
+      const data = await res.json();
+      if(data.status !== 'success'){
+        contestListForYearEl.innerHTML = '<div class="entry-empty">Không tải được danh sách cuộc thi.</div>';
+        return;
+      }
+      allContestsCache = Array.isArray(data.contests) ? data.contests : [];
+      renderYearPills();
+    }catch(err){
+      console.error('Không tải được danh sách cuộc thi (kết quả):', err);
+      contestListForYearEl.innerHTML = '<div class="entry-empty">Có lỗi khi tải danh sách. Vui lòng thử lại.</div>';
+    }
+  }
+
+  function renderYearPills(){
+    const currentYear = new Date().getFullYear();
+
+    if(!allContestsCache || allContestsCache.length === 0){
+      yearPillsEl.innerHTML = '';
+      contestListForYearEl.innerHTML = '<div class="entry-empty">Chưa có cuộc thi nào.</div>';
+      return;
+    }
+
+    // Nhóm các cuộc thi theo năm dựa vào ngày mở.
+    const years = new Set();
+    allContestsCache.forEach(c => {
+      const y = c.openDate ? new Date(c.openDate).getFullYear() : currentYear;
+      years.add(y);
+    });
+    years.add(currentYear); // năm hiện tại luôn có mặt để chọn, kể cả chưa có cuộc thi nào
+
+    const sortedYears = Array.from(years).sort((a, b) => b - a); // mới nhất trước
+
+    // Mặc định: năm hiện tại luôn được chọn sẵn khi mới vào tab.
+    if(!selectedYear || !sortedYears.includes(selectedYear)){
+      selectedYear = currentYear;
+    }
+
+    yearPillsEl.innerHTML = '';
+    sortedYears.forEach(y => {
+      const pill = document.createElement('div');
+      pill.className = 'year-pill' + (y === selectedYear ? ' active' : '');
+      pill.textContent = y === currentYear ? `${y} (hiện tại)` : `${y}`;
+      pill.addEventListener('click', () => {
+        selectedYear = y;
+        renderYearPills();
+      });
+      yearPillsEl.appendChild(pill);
+    });
+
+    renderContestListForYear();
+  }
+
+  function renderContestListForYear(){
+    const list = allContestsCache
+      .filter(c => {
+        const y = c.openDate ? new Date(c.openDate).getFullYear() : new Date().getFullYear();
+        return y === selectedYear;
+      })
+      .sort((a, b) => new Date(b.openDate || 0) - new Date(a.openDate || 0));
+
+    if(list.length === 0){
+      contestListForYearEl.innerHTML = `<div class="entry-empty">Chưa có cuộc thi nào trong năm ${selectedYear}.</div>`;
+      return;
+    }
+
+    contestListForYearEl.innerHTML = '';
+    list.forEach(c => {
+      const status = getContestStatus(c);
+      const item = document.createElement('div');
+      item.className = 'contest-list-item';
+      item.innerHTML = `
+        <div class="clname">${escapeHtml(c.contestName)}<span class="status-badge status-${status}">${STATUS_LABEL[status]}</span></div>
+        <div class="cldate">${c.openDate ? formatVN(c.openDate) : '—'}${c.endDate ? ' — ' + formatVN(c.endDate) : ''}</div>
+      `;
+      item.addEventListener('click', () => openEntriesView(c));
+      contestListForYearEl.appendChild(item);
+    });
+  }
+
+  async function openEntriesView(contest){
+    yearScreen.style.display = 'none';
+    entriesScreen.style.display = 'block';
+    entriesTitleEl.textContent = contest.contestName;
+    entriesCountEl.textContent = 'Đang tải danh sách...';
+    entriesListEl.innerHTML = '';
+
+    try{
+      const res = await fetch(`${SCRIPT_URL}?action=getPublicEntries&contestId=${encodeURIComponent(contest.id)}`);
+      const data = await res.json();
+      if(data.status !== 'success'){
+        entriesCountEl.textContent = data.message || 'Không tải được danh sách.';
+        return;
+      }
+      const names = data.names || [];
+      entriesCountEl.textContent = names.length > 0
+        ? `${names.length} người đã tham gia`
+        : 'Chưa có ai nộp bài.';
+
+      if(names.length === 0){
+        entriesListEl.innerHTML = '<div class="entry-empty">Chưa có bài dự thi nào.</div>';
+        return;
+      }
+      entriesListEl.innerHTML = names.map((n, i) => `
+        <div class="entry-row"><span class="idx">${i + 1}</span><span>${escapeHtml(n)}</span></div>
+      `).join('');
+    }catch(err){
+      console.error('Không tải được danh sách người tham gia:', err);
+      entriesCountEl.textContent = 'Có lỗi khi tải danh sách. Vui lòng thử lại.';
+    }
+  }
+
+  entriesBackBtn.addEventListener('click', () => {
+    entriesScreen.style.display = 'none';
+    yearScreen.style.display = 'block';
   });
 </script>
 </body>
