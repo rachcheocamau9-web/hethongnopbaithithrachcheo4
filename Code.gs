@@ -58,6 +58,9 @@ function doGet(e) {
   if (action === 'getSettings') {
     return jsonOutput(getPublicContestList());
   }
+  if (action === 'getPublicEntries') {
+    return jsonOutput(getPublicEntries(e.parameter.contestId));
+  }
   return jsonOutput({ status: 'error', message: 'Action không hợp lệ.' });
 }
 
@@ -211,6 +214,30 @@ function getPublicContestList() {
     endDate: c.endDate
   }));
   return { status: 'success', contests: contests };
+}
+
+// Danh sách CÔNG KHAI người đã nộp bài của 1 cuộc thi — dùng cho trang
+// "Xem kết quả" mà ai cũng xem được (KHÔNG cần mật khẩu). Chỉ trả về
+// Họ và tên, KHÔNG trả link file hay bất kỳ dữ liệu nội bộ nào khác.
+function getPublicEntries(contestId) {
+  contestId = (contestId || '').toString().trim();
+  if (!contestId) {
+    return { status: 'error', message: 'Thiếu ID cuộc thi.' };
+  }
+  const contest = getContestById(contestId);
+  if (!contest) {
+    return { status: 'error', message: 'Không tìm thấy cuộc thi.' };
+  }
+  const sheet = getOrCreateDataSheet(contest.sheetName);
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    return { status: 'success', contestName: contest.contestName, names: [] };
+  }
+  const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // cột B - Họ và tên
+  const names = values
+    .map(row => (row[0] ? row[0].toString().trim() : ''))
+    .filter(n => n);
+  return { status: 'success', contestName: contest.contestName, names: names };
 }
 
 // Bản đầy đủ cho admin (yêu cầu mật khẩu) — không lộ folderId ra ngoài nhưng
